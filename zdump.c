@@ -246,6 +246,11 @@ extern int	optind;
 extern char *	tzname[2];
 
 /* The minimum and maximum finite time values.  */
+
+
+static bool g_sflag = false;
+
+
 static time_t const absolute_min_time =
   ((time_t) -1 < 0
    ? (time_t) -1 << (CHAR_BIT * sizeof (time_t) - 1)
@@ -554,7 +559,7 @@ static void
 usage(FILE * const stream, const int status)
 {
 	fprintf(stream,
-_("%s: usage: %s [--version] [--help] [-{vV}] [-{ct} [lo,]hi] zonename ...\n"
+_("%s: usage: %s [--version] [--help] [-s] [-{vV}] [-{ct} [lo,]hi] zonename ...\n"
   "\n"
   "Report bugs to %s.\n"),
 		       progname, progname, REPORT_BUGS_TO);
@@ -602,14 +607,16 @@ main(int argc, char *argv[])
 		} else if (strcmp(argv[i], "--help") == 0) {
 			usage(stdout, EXIT_SUCCESS);
 		}
+	g_sflag = false;
 	vflag = Vflag = false;
 	cutarg = cuttimes = NULL;
 	for (;;)
-	  switch (getopt(argc, argv, "c:t:vV")) {
+	  switch (getopt(argc, argv, "c:t:vVs")) {
 	  case 'c': cutarg = optarg; break;
 	  case 't': cuttimes = optarg; break;
 	  case 'v': vflag = true; break;
 	  case 'V': Vflag = true; break;
+	  case 's': g_sflag = true; break;
 	  case -1:
 	    if (! (optind == argc - 1 && strcmp(argv[optind], "=") == 0))
 	      goto arg_processing_done;
@@ -893,6 +900,18 @@ show(timezone_t tz, char *zone, time_t t, bool v)
 	register struct tm *	tmp;
 	register struct tm *	gmtmp;
 	struct tm tm, gmtm;
+
+	if (g_sflag) {
+		tmp = my_localtime_rz(tz, &t, &tm);
+
+		printf("%ld,%d", t, tmp->tm_isdst);
+#ifdef TM_GMTOFF
+		printf(",%ld", tmp->TM_GMTOFF);
+#endif
+		printf("\n");
+
+		return;
+	}
 
 	printf("%-*s  ", longest, zone);
 	if (v) {
